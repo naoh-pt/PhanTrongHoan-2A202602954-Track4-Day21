@@ -40,11 +40,11 @@ Demo CP2 trên KITTI `000011`: 53.503 điểm trong vùng quan tâm, còn 8.652 
 
 ## 3. Failure case
 
-Nêu khi nào hệ thống hoặc phương pháp fail, vì sao fail, và liên hệ tới lớp nào trong 6 lớp debug: I/O, Geometry, Time, Preprocess, Model, Metric.
+KITTI `000043` có 4 nhãn `Pedestrian`: P1/P2 ở khoảng 12–13 m, P3/P4 ở khoảng 20–21 m. Với voxel 0,20 m, ngưỡng đất 0,20 m và DBSCAN `eps=0,60 m`, tâm hai người trong mỗi cặp nằm chung một AABB cụm: **4 GT → 2 cụm**. Một cụm vì thế không đại diện cho một người.
 
-![failure](../results/figures/fail_[ĐIỀN].png)
+![Failure: hai cặp người đi bộ bị DBSCAN gộp cụm](../results/figures/fail_01_merged_pedestrians.png)
 
-[ĐIỀN]
+Nguyên nhân chính thuộc **Preprocess**: `eps` nối các điểm của hai người đứng gần nhau thành một cụm; lớp **Metric** cũng cần lưu ý vì đếm cụm không phải đếm người hay recall theo GT. Giữ mọi tham số khác và giảm `eps` xuống 0,40 m chỉ cải thiện thành **4 GT → 3 cụm**; P1/P2 vẫn bị gộp. Khi chạy trên robot, cần theo dõi cụm rộng bất thường, thử ngưỡng theo mật độ/khoảng cách và đối chiếu theo thời gian hoặc với cảm biến khác trước khi coi mỗi cụm là một vật cản riêng.
 
 ## 4. Khuyến nghị nếu triển khai thật
 
@@ -54,7 +54,7 @@ Use-case cụ thể (ADAS / robot / drone), trade-off và bước tiếp theo.
 
 ## 5. Cách chạy lại
 
-Từ gốc repo trên Windows PowerShell, chạy các lệnh sau để tái tạo demo CP2 và benchmark CP3.
+Từ gốc repo trên Windows PowerShell, chạy các lệnh sau để tái tạo demo CP2, benchmark CP3 và failure case CP4.
 
 ```powershell
 python -m venv .venv
@@ -62,6 +62,7 @@ python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install "open3d>=0.18"
 .\.venv\Scripts\python.exe -m src.obstacle_demo --data-root data/kitti_mini --frame 000011 --voxel-size 0.20 --ground-threshold 0.20 --eps 0.60 --min-points 8 --seed 0 --out results/figures/obstacle_demo_000011.png
 .\.venv\Scripts\python.exe -m src.obstacle_benchmark
+.\.venv\Scripts\python.exe -m src.obstacle_failure --data-root data/kitti_mini --frame 000043 --out results/figures/fail_01_merged_pedestrians.png
 ```
 
 ## 6. Khai báo sử dụng AI
@@ -70,4 +71,4 @@ Ghi rõ đã dùng công cụ AI nào, dùng vào việc gì, và bạn đã t�
 
 | Công cụ | Dùng cho việc gì | Bạn đã kiểm chứng thế nào |
 |---|---|---|
-| OpenAI Codex | Hỗ trợ xây dựng script CP2–CP3, chạy benchmark và rà soát báo cáo | Đã chạy demo KITTI/synthetic, kiểm tra ảnh BEV, 15 cấu hình và chạy lại để đối chiếu metric hình học; học viên cần tự chạy và giải thích lại trước khi nộp |
+| OpenAI Codex | Hỗ trợ xây dựng script CP2–CP4, chạy thí nghiệm và rà soát báo cáo | Đã chạy demo KITTI/synthetic, kiểm tra 15 cấu hình, chạy lại metric hình học và đối chiếu 4 nhãn Pedestrian với ảnh failure; học viên cần tự chạy và giải thích lại trước khi nộp |
