@@ -1,20 +1,14 @@
 # Báo cáo Day 6: Ảnh hưởng của voxel downsample và ngưỡng tách mặt đất đến phát hiện vật cản gần bằng LiDAR
 
-> Thay **mọi** ô có chữ ĐIỀN nằm trong ngoặc vuông bằng nội dung của bạn, xoá luôn cả dấu ngoặc vuông. Lệnh `python tools/check_submission.py` sẽ báo FAIL nếu còn sót bất kỳ chỗ nào.
-
 - **Họ tên:** Phan Trọng Hoàn
 - **MSSV:** 2A202602954
 - **Lớp:** Track 4
 - **Link repo:** https://github.com/naoh-pt/PhanTrongHoan-2A202602954-Track4-Day21
 - **Topic:** D — Robot/drone obstacle
 - **Dataset:** `data/kitti_mini` (thí nghiệm chính); `data/synthetic` (kiểm tra pipeline)
-- **Các frame chọn cho thí nghiệm:** `000011`, `000043`, `000049`
-
-> Hãy viết ngắn: mỗi mục từ 3 đến 8 dòng, ưu tiên số liệu và hình ảnh.
+- **Các frame đã dùng:** `000011`, `000043`, `000049`; synthetic `000000` để kiểm tra điểm không hợp lệ
 
 ## 1. Claim
-
-Một câu khẳng định kỹ thuật có thể kiểm chứng. Ví dụ: *"Lệch yaw 1° làm 12% điểm LiDAR rơi ra khỏi vật thể ở 30 m, phát hiện được bằng edge-alignment score với ngưỡng X."*
 
 Trên ba frame KITTI `000011`, `000043`, `000049`, trong ROI phía trước 0–30 m, tăng `voxel_size` từ 0,10 lên 0,40 m làm giảm ít nhất 20% **tổng số cụm gần** (AABB cách LiDAR ≤20 m), khi giữ ngưỡng tách đất 0,20 m, DBSCAN `eps=0,60 m`, `min_points=8` và seed 0. Kết quả CP3 là 72 → 57 cụm, giảm 20,8% khi cộng ba frame; mức giảm không đúng 20% trên từng frame.
 
@@ -32,11 +26,13 @@ Quét riêng voxel 0,10/0,20/0,40 m và ngưỡng RANSAC 0,10/0,20/0,30 m. Bản
 
 ![Biểu đồ quét hai tham số](../results/figures/obstacle_parameter_sweep.png)
 
-Vùng quan tâm và DBSCAN được giữ cố định, seed 0; mỗi cấu hình bỏ lần chạy đầu rồi đo 20 lần trên CPU Intel i5-1035G1, Open3D 0.20.0. Latency gồm voxel, RANSAC, DBSCAN và tạo box, không gồm đọc file/vùng quan tâm. Kết quả hình học trùng khớp khi chạy lại; latency có dao động. Số cụm là chỉ số của pipeline, chưa phải recall theo nhãn GT.
+ROI cố định: `0 < x ≤ 30 m`, `|y| ≤ 15 m`, `−3 ≤ z ≤ 3 m`; DBSCAN và seed 0 cũng được giữ cố định. Mỗi cấu hình bỏ lần chạy đầu rồi đo 20 lần trên CPU Intel i5-1035G1, Open3D 0.20.0. Latency gồm voxel, RANSAC, DBSCAN và tạo box, không gồm đọc file/crop ROI. Kết quả hình học trùng khớp khi chạy lại; latency có dao động. Số cụm là chỉ số của pipeline, chưa phải recall theo nhãn GT.
 
 Demo CP2 trên KITTI `000011`: 53.503 điểm trong vùng quan tâm, còn 8.652 điểm sau voxel 0,20 m; RANSAC tách 4.540 điểm mặt đất và DBSCAN tạo 34 cụm. Đây là kiểm tra pipeline, chưa phải kết quả benchmark CP3.
 
 ![Demo bốn bước của pipeline phát hiện vật cản](../results/figures/obstacle_demo_000011.png)
+
+Kiểm tra dữ liệu ban đầu: [CSV data health](../results/data_health.csv) ghi 5 frame synthetic, khoảng 0,10% điểm không hợp lệ mỗi frame; pipeline lọc các điểm này. Nguồn dữ liệu và hình minh họa: **KITTI Vision Benchmark Suite**.
 
 ## 3. Failure case
 
@@ -48,9 +44,9 @@ Nguyên nhân chính thuộc **Preprocess**: `eps` nối các điểm của hai 
 
 ## 4. Khuyến nghị nếu triển khai thật
 
-Use-case cụ thể (ADAS / robot / drone), trade-off và bước tiếp theo.
+Với robot di chuyển trong kho, pipeline này phù hợp làm cảnh báo vật cản LiDAR ban đầu trong vùng phía trước, sau khi hiệu chỉnh ROI theo kích thước và tốc độ robot. Voxel lớn giảm thời gian xử lý nhưng có thể làm mất cụm: ở frame `000043`, tăng voxel 0,10 → 0,40 m làm p50 giảm 107,7 → 61,2 ms, đồng thời số cụm gần giảm 18 → 15. Không nên dùng số cụm như số người vì hai người gần nhau đã bị gộp ở CP4.
 
-[ĐIỀN]
+Khi chạy thật, ghi log số điểm hợp lệ, tỷ lệ điểm thuộc mặt đất, số và kích thước cụm, khoảng cách cụm gần nhất, tỷ lệ cụm rộng bất thường và latency p95. Cần thử trên LiDAR gắn trên robot, nhiều mật độ/vị trí vật cản, rồi dùng theo dõi qua nhiều frame hoặc cảm biến bổ sung trước khi quyết định tránh va chạm.
 
 ## 5. Cách chạy lại
 
@@ -59,7 +55,8 @@ Từ gốc repo trên Windows PowerShell, chạy các lệnh sau để tái tạ
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
-.\.venv\Scripts\python.exe -m pip install "open3d>=0.18"
+.\.venv\Scripts\python.exe -m pip install "open3d==0.20.0"
+.\.venv\Scripts\python.exe -m starter.data_health --data-root data/synthetic
 .\.venv\Scripts\python.exe -m src.obstacle_demo --data-root data/kitti_mini --frame 000011 --voxel-size 0.20 --ground-threshold 0.20 --eps 0.60 --min-points 8 --seed 0 --out results/figures/obstacle_demo_000011.png
 .\.venv\Scripts\python.exe -m src.obstacle_benchmark
 .\.venv\Scripts\python.exe -m src.obstacle_failure --data-root data/kitti_mini --frame 000043 --out results/figures/fail_01_merged_pedestrians.png
@@ -67,8 +64,6 @@ python -m venv .venv
 
 ## 6. Khai báo sử dụng AI
 
-Ghi rõ đã dùng công cụ AI nào, dùng vào việc gì, và bạn đã tự kiểm chứng kết quả đó bằng cách nào. Nếu không dùng AI, ghi "Không sử dụng". Xem quy định ở `RULES.md` mục 2.
-
 | Công cụ | Dùng cho việc gì | Bạn đã kiểm chứng thế nào |
 |---|---|---|
-| OpenAI Codex | Hỗ trợ xây dựng script CP2–CP4, chạy thí nghiệm và rà soát báo cáo | Đã chạy demo KITTI/synthetic, kiểm tra 15 cấu hình, chạy lại metric hình học và đối chiếu 4 nhãn Pedestrian với ảnh failure; học viên cần tự chạy và giải thích lại trước khi nộp |
+| OpenAI Codex | Hỗ trợ chọn topic, viết script CP2–CP4, thiết kế benchmark, phân tích failure và rà soát báo cáo CP5 | Đã chạy demo KITTI/synthetic, kiểm tra 15 cấu hình, chạy lại metric hình học, đối chiếu 4 nhãn Pedestrian với ảnh failure và chạy `check_submission.py`; học viên cần tự chạy, hiểu và xác nhận trước khi nộp |
