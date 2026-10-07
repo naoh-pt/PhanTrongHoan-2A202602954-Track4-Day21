@@ -19,9 +19,9 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 import numpy as np
-import open3d as o3d
 
 from starter.datasets import dataset_type, load_points
+from src.obstacle_core import crop_kitti_points, run_pipeline
 
 
 def parse_args() -> argparse.Namespace:
@@ -44,12 +44,6 @@ def parse_args() -> argparse.Namespace:
     if args.min_points < 1 or args.max_forward <= 0 or args.half_width <= 0:
         parser.error("min-points >= 1, max-forward > 0 và half-width > 0")
     return args
-
-
-def make_cloud(xyz: np.ndarray) -> o3d.geometry.PointCloud:
-    cloud = o3d.geometry.PointCloud()
-    cloud.points = o3d.utility.Vector3dVector(xyz)
-    return cloud
 
 
 def setup_bev(ax, title: str, max_forward: float, half_width: float) -> None:
@@ -79,33 +73,14 @@ def main() -> None:
         raise ValueError("Demo này dùng hệ trục KITTI; hãy chọn data/kitti_mini hoặc data/synthetic")
 
     raw = load_points(args.data_root, args.frame)
-    xyz = raw[:, :3]
-    finite = np.isfinite(xyz).all(axis=1)
-    xyz = xyz[finite]
-    roi = ((xyz[:, 0] > 0) & (xyz[:, 0] <= args.max_forward)
-           & (np.abs(xyz[:, 1]) <= args.half_width)
-           & (xyz[:, 2] >= -3) & (xyz[:, 2] <= 3))
-    cropped = xyz[roi]
-    if len(cropped) < 3:
-        raise ValueError("Vùng quan tâm có quá ít điểm để tách mặt đất")
-
-    cloud = make_cloud(cropped)
-    sampled = cloud.voxel_down_sample(args.voxel_size)
-    if len(sampled.points) < 3:
-        raise ValueError("Voxel size quá lớn: còn quá ít điểm để chạy RANSAC")
-
-    o3d.utility.random.seed(args.seed)
-    plane, ground_ids = sampled.segment_plane(
-        distance_threshold=args.ground_threshold, ransac_n=3, num_iterations=100)
-    ground = sampled.select_by_index(ground_ids)
-    obstacles = sampled.select_by_index(ground_ids, invert=True)
-    labels = np.asarray(obstacles.cluster_dbscan(
-        eps=args.eps, min_points=args.min_points, print_progress=False))
-    cluster_ids = np.unique(labels[labels >= 0])
-
-    sampled_xyz = np.asarray(sampled.points)
-    ground_xyz = np.asarray(ground.points)
-    obstacle_xyz = np.asarray(obstacles.points)
+    cropped, invalid = crop_kitti_points(raw, args.max_forward, args.half_width)
+    result = run_pipeline(cropped, args.voxel_size, args.ground_threshold,
+                          args.eps, args.min_points, args.seed)
+    sampled_xyz = np.asarray(result.sampled.points)
+    ground_xyz = np.asarray(result.ground.points)
+    obstacle_xyz = np.asarray(result.obstacles.points)
+    labels = result.labels
+    cluster_ids = result.cluster_ids
     fig, axes = plt.subplots(2, 2, figsize=(13, 10), constrained_layout=True)
     for ax, title in zip(axes.flat, (
         f"1. Điểm gốc trong ROI: {len(cropped):,}",
@@ -121,11 +96,10 @@ def main() -> None:
     scatter_xy(axes[1, 0], obstacle_xyz, color="#ea580c", size=0.8)
     scatter_xy(axes[1, 1], obstacle_xyz[labels < 0], color="#cbd5e1", size=0.6)
     colors = plt.get_cmap("tab20", max(len(cluster_ids), 1))
-    for color_index, cluster_id in enumerate(cluster_ids):
+    for color_index, (cluster_id, box) in enumerate(zip(cluster_ids, result.boxes)):
         cluster_xyz = obstacle_xyz[labels == cluster_id]
         color = colors(color_index)
         scatter_xy(axes[1, 1], cluster_xyz, color=[color], size=1.5)
-        box = obstacles.select_by_index(np.flatnonzero(labels == cluster_id)).get_axis_aligned_bounding_box()
         axes[1, 1].add_patch(Rectangle(
             box.min_bound[:2], *(box.max_bound[:2] - box.min_bound[:2]),
             fill=False, edgecolor=color, linewidth=0.9))
@@ -134,10 +108,10 @@ def main() -> None:
     args.out.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(args.out, dpi=160)
     plt.close(fig)
-    print(f"frame={args.frame} raw={len(raw)} invalid={len(raw) - finite.sum()} "
+    print(f"frame={args.frame} raw={len(raw)} invalid={invalid} "
           f"roi={len(cropped)} voxel={len(sampled_xyz)} ground={len(ground_xyz)} "
           f"non_ground={len(obstacle_xyz)} clusters={len(cluster_ids)} "
-          f"plane_normal={np.asarray(plane[:3]).round(3).tolist()}")
+          f"plane_normal={np.asarray(result.plane[:3]).round(3).tolist()}")
     print(f"figure={args.out}")
 
 
