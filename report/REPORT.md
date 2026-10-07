@@ -26,7 +26,9 @@ Bảng hoặc plot số liệu, kèm ảnh/video demo. Ghi rõ đường dẫn f
 |---|---|---|---|
 | [ĐIỀN] | | | |
 
-![demo](../results/figures/[ĐIỀN].png)
+Demo CP2 trên KITTI `000011`: 53.503 điểm trong vùng quan tâm, còn 8.652 điểm sau voxel 0,20 m; RANSAC tách 4.540 điểm mặt đất và DBSCAN tạo 34 cụm. Đây là kiểm tra pipeline, chưa phải kết quả benchmark CP3.
+
+![Demo bốn bước của pipeline phát hiện vật cản](../results/figures/obstacle_demo_000011.png)
 
 ## 3. Failure case
 
@@ -44,10 +46,13 @@ Use-case cụ thể (ADAS / robot / drone), trade-off và bước tiếp theo.
 
 ## 5. Cách chạy lại
 
-Các lệnh tái tạo lại toàn bộ kết quả từ repo sạch.
+Từ gốc repo trên Windows PowerShell, chạy các lệnh sau để tái tạo demo CP2. Lệnh cho benchmark sẽ được bổ sung ở CP3.
 
-```bash
-[ĐIỀN]
+```powershell
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m pip install "open3d>=0.18"
+.\.venv\Scripts\python.exe -m src.obstacle_demo --data-root data/kitti_mini --frame 000011 --voxel-size 0.20 --ground-threshold 0.20 --eps 0.60 --min-points 8 --seed 0 --out results/figures/obstacle_demo_000011.png
 ```
 
 ## 6. Khai báo sử dụng AI
@@ -56,4 +61,4 @@ Ghi rõ đã dùng công cụ AI nào, dùng vào việc gì, và bạn đã t�
 
 | Công cụ | Dùng cho việc gì | Bạn đã kiểm chứng thế nào |
 |---|---|---|
-| [ĐIỀN] | | |
+| OpenAI Codex | Hỗ trợ xây dựng script demo CP2 và rà soát báo cáo | Đã chạy trên KITTI `000011` và synthetic `000000`, kiểm tra số điểm, pháp tuyến mặt đất và ảnh BEV; học viên cần tự chạy và giải thích lại trước khi nộp |
