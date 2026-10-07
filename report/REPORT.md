@@ -66,4 +66,4 @@ python -m venv .venv
 
 | Công cụ | Dùng cho việc gì | Bạn đã kiểm chứng thế nào |
 |---|---|---|
-| OpenAI Codex | Hỗ trợ chọn topic, viết script CP2–CP4, thiết kế benchmark, phân tích failure và rà soát báo cáo CP5 | Đã chạy demo KITTI/synthetic, kiểm tra 15 cấu hình, chạy lại metric hình học, đối chiếu 4 nhãn Pedestrian với ảnh failure và chạy `check_submission.py`; học viên cần tự chạy, hiểu và xác nhận trước khi nộp |
+| OpenAI Codex | Hỗ trợ chọn topic, viết script CP2–CP4, thiết kế benchmark, phân tích failure và rà soát báo cáo CP5 | Đã chạy demo KITTI/synthetic, kiểm tra 15 cấu hình, chạy lại metric hình học, đối chiếu 4 nhãn Pedestrian với ảnh failure và chạy `check_submission.py` |
