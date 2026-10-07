@@ -1,14 +1,14 @@
-# Báo cáo Day 6: [ĐIỀN tên đề tài ngắn]
+# Báo cáo Day 6: Ảnh hưởng của voxel downsample và ngưỡng tách mặt đất đến phát hiện vật cản gần bằng LiDAR
 
 > Thay **mọi** ô có chữ ĐIỀN nằm trong ngoặc vuông bằng nội dung của bạn, xoá luôn cả dấu ngoặc vuông. Lệnh `python tools/check_submission.py` sẽ báo FAIL nếu còn sót bất kỳ chỗ nào.
 
-- **Họ tên:** [ĐIỀN]
-- **MSSV:** [ĐIỀN] (phải trùng với MSSV trong tên repo `<HoVaTen>-<MSSV>-Track4-Day21`)
-- **Lớp:** [ĐIỀN]
-- **Link repo:** [ĐIỀN]
-- **Topic:** [ĐIỀN một chữ cái A/B/C/D/E/F] — [ĐIỀN tên topic]
-- **Dataset:** [ĐIỀN một hoặc nhiều trong: data/synthetic, data/kitti_mini, data/nuscenes_mini_subset, log riêng]
-- **Các frame đã dùng:** [ĐIỀN danh sách frame id, ví dụ 000011, 000049 hoặc scene-0103_010]
+- **Họ tên:** Phan Trọng Hoàn
+- **MSSV:** 2A202602954
+- **Lớp:** Track 4
+- **Link repo:** https://github.com/naoh-pt/PhanTrongHoan-2A202602954-Track4-Day21
+- **Topic:** D — Robot/drone obstacle
+- **Dataset:** `data/kitti_mini` (thí nghiệm chính); `data/synthetic` (kiểm tra pipeline)
+- **Các frame chọn cho thí nghiệm:** `000011`, `000043`, `000049`
 
 > Hãy viết ngắn: mỗi mục từ 3 đến 8 dòng, ưu tiên số liệu và hình ảnh.
 
@@ -16,7 +16,7 @@
 
 Một câu khẳng định kỹ thuật có thể kiểm chứng. Ví dụ: *"Lệch yaw 1° làm 12% điểm LiDAR rơi ra khỏi vật thể ở 30 m, phát hiện được bằng edge-alignment score với ngưỡng X."*
 
-[ĐIỀN]
+**Giả thuyết CP1:** Trên các frame KITTI `000011`, `000043`, `000049`, trong vùng phía trước 0–30 m, tăng `voxel_size` từ 0,10 m lên 0,40 m sẽ làm giảm ít nhất 20% số cụm vật cản ở khoảng cách không quá 20 m, khi giữ ngưỡng tách đất và các tham số DBSCAN cố định. Để đạt mức Good của topic D, sẽ quét riêng ngưỡng RANSAC ở 0,10/0,20/0,30 m và đo số cụm, kích thước bounding box, khoảng cách tới cụm gần nhất cùng thời gian chạy.
 
 ## 2. Evidence
 
